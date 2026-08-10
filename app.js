@@ -163,7 +163,12 @@ function setupEventListeners() {
     renderCanvas();
   });
 
-  zoomRange.addEventListener('input', (e) => { state.scale = parseFloat(e.target.value); renderCanvas(); });
+  zoomRange.addEventListener('input', (e) => { 
+    const zoomVal = parseFloat(e.target.value);
+    state.scale = 1 + (zoomVal / 100); 
+    clampPan(); 
+    renderCanvas(); 
+  });
   rotateRange.addEventListener('input', (e) => { state.rotate = parseInt(e.target.value); renderCanvas(); });
   brightnessRange.addEventListener('input', (e) => { state.brightness = parseInt(e.target.value); renderCanvas(); });
   contrastRange.addEventListener('input', (e) => { state.contrast = parseInt(e.target.value); renderCanvas(); });
@@ -174,7 +179,7 @@ function setupEventListeners() {
   const btnResetBrightness = document.getElementById('btnResetBrightness');
   const btnResetContrast = document.getElementById('btnResetContrast');
 
-  if (btnResetZoom) btnResetZoom.addEventListener('click', () => { state.scale = 1; zoomRange.value = 1; renderCanvas(); });
+  if (btnResetZoom) btnResetZoom.addEventListener('click', () => { state.scale = 1; zoomRange.value = 0; clampPan(); renderCanvas(); });
   if (btnResetRotate) btnResetRotate.addEventListener('click', () => { state.rotate = 0; rotateRange.value = 0; renderCanvas(); });
   if (btnResetBrightness) btnResetBrightness.addEventListener('click', () => { state.brightness = 100; brightnessRange.value = 100; renderCanvas(); });
   if (btnResetContrast) btnResetContrast.addEventListener('click', () => { state.contrast = 100; contrastRange.value = 100; renderCanvas(); });
@@ -184,7 +189,7 @@ function setupEventListeners() {
     state.panY = 0;
     state.rotate = 0;
     state.scale = 1;
-    zoomRange.value = 1;
+    zoomRange.value = 0;
     rotateRange.value = 0;
     renderCanvas();
     
@@ -208,7 +213,7 @@ function setupEventListeners() {
     state.panX = 0;
     state.panY = 0;
     
-    zoomRange.value = 1;
+    zoomRange.value = 0;
     rotateRange.value = 0;
     brightnessRange.value = 100;
     contrastRange.value = 100;
@@ -237,6 +242,9 @@ function setFormat(format) {
     formatBFields.classList.add('hidden');
     canvas.width = 800;
     canvas.height = 800;
+    canvasWrapper.classList.add('format-a');
+    canvasWrapper.classList.remove('format-b');
+    canvasWrapper.style.aspectRatio = '800 / 800';
     resIndicator.textContent = '800 × 800 px (PFP)';
   } else {
     tabFormatB.classList.add('active');
@@ -244,6 +252,9 @@ function setFormat(format) {
     formatBFields.classList.remove('hidden');
     canvas.width = 1080;
     canvas.height = 1350;
+    canvasWrapper.classList.add('format-b');
+    canvasWrapper.classList.remove('format-a');
+    canvasWrapper.style.aspectRatio = '1080 / 1350';
     resIndicator.textContent = '1080 × 1350 px (Pass)';
   }
   updateCaption();
@@ -278,7 +289,7 @@ async function processFile(file) {
       state.panX = 0;
       state.panY = 0;
       state.scale = 1;
-      zoomRange.value = 1;
+      zoomRange.value = 0;
       renderCanvas();
     };
     img.src = event.target.result;
@@ -286,21 +297,85 @@ async function processFile(file) {
   reader.readAsDataURL(imageFile);
 }
 
+function isPointInsidePhotoArea(clientX, clientY) {
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  const canvasX = (clientX - rect.left) * scaleX;
+  const canvasY = (clientY - rect.top) * scaleY;
+
+  if (state.format === 'format-a') {
+    const circleX = canvas.width / 2;
+    const circleY = canvas.height / 2;
+    const radius = 330;
+    const dx = canvasX - circleX;
+    const dy = canvasY - circleY;
+    return (dx * dx + dy * dy) <= (radius * radius);
+  } else {
+    const photoW = 620;
+    const photoH = 620;
+    const photoX = (canvas.width - photoW) / 2;
+    const photoY = 250;
+    return canvasX >= photoX && canvasX <= (photoX + photoW) &&
+           canvasY >= photoY && canvasY <= (photoY + photoH);
+  }
+}
+
 function startDrag(e) {
-  state.isDragging = true;
   const clientX = e.touches ? e.touches[0].clientX : e.clientX;
   const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+  if (!isPointInsidePhotoArea(clientX, clientY)) {
+    return;
+  }
+
+  state.isDragging = true;
   state.dragStartX = clientX - state.panX;
   state.dragStartY = clientY - state.panY;
 }
 
+function clampPan() {
+  if (!state.image) return;
+
+  const imgW = state.image.width;
+  const imgH = state.image.height;
+  const aspect = imgW / imgH;
+
+  let frameW, frameH;
+  if (state.format === 'format-a') {
+    const radius = 330;
+    frameW = radius * 2;
+    frameH = radius * 2;
+  } else {
+    frameW = 620;
+    frameH = 620;
+  }
+
+  let drawW = frameW;
+  let drawH = drawW / aspect;
+  if (drawH < frameH) {
+    drawH = frameH;
+    drawW = drawH * aspect;
+  }
+
+  const scaledW = drawW * state.scale;
+  const scaledH = drawH * state.scale;
+
+  const maxPanX = Math.max(0, (scaledW - frameW) / 2);
+  const maxPanY = Math.max(0, (scaledH - frameH) / 2);
+
+  state.panX = Math.min(maxPanX, Math.max(-maxPanX, state.panX));
+  state.panY = Math.min(maxPanY, Math.max(-maxPanY, state.panY));
+}
+
 function drag(e) {
   if (!state.isDragging) return;
-  e.preventDefault();
+  if (e.cancelable) e.preventDefault();
   const clientX = e.touches ? e.touches[0].clientX : e.clientX;
   const clientY = e.touches ? e.touches[0].clientY : e.clientY;
   state.panX = clientX - state.dragStartX;
   state.panY = clientY - state.dragStartY;
+  clampPan();
   renderCanvas();
 }
 
@@ -352,10 +427,10 @@ function renderFormatA() {
     const imgH = state.image.height;
     const aspect = imgW / imgH;
     
-    let drawW = radius * 2 * 1.1;
+    let drawW = radius * 2;
     let drawH = drawW / aspect;
-    if (drawH < radius * 2 * 1.1) {
-      drawH = radius * 2 * 1.1;
+    if (drawH < radius * 2) {
+      drawH = radius * 2;
       drawW = drawH * aspect;
     }
 
@@ -397,11 +472,11 @@ function renderFormatB() {
   // Polka Dot Outer Frame
   drawPolkaDotBorder(ctx, width, height, theme.gold, theme.pink);
 
-  // Outer Ornate Card Border
+  // Outer Ornate Card Border (Expanded to match frame dimensions)
   ctx.save();
   ctx.strokeStyle = theme.gold;
-  ctx.lineWidth = 8;
-  drawRoundedRect(ctx, 40, 40, width - 80, height - 80, 32);
+  ctx.lineWidth = 6;
+  drawRoundedRect(ctx, 24, 24, width - 48, height - 48, 28);
   ctx.stroke();
   ctx.restore();
 
@@ -410,41 +485,41 @@ function renderFormatB() {
   ctx.fillStyle = theme.cardBg;
   ctx.strokeStyle = theme.gold;
   ctx.lineWidth = 4;
-  drawRoundedRect(ctx, 70, 70, width - 140, 160, 24);
+  drawRoundedRect(ctx, 48, 48, width - 96, 175, 24);
   ctx.fill();
   ctx.stroke();
 
   // Header Subtitle: "GOA, INDIA"
   ctx.fillStyle = theme.gold;
-  ctx.font = '700 20px "JetBrains Mono", monospace';
+  ctx.font = '700 22px "JetBrains Mono", monospace';
   ctx.textAlign = 'center';
-  ctx.fillText('GOA, INDIA', width / 2, 105);
+  ctx.fillText('GOA, INDIA', width / 2, 86);
 
   // Title: "HACKER HOUSE" with Devanagari "गोवा"
-  ctx.font = '900 42px "Outfit", sans-serif';
+  ctx.font = '900 46px "Outfit", sans-serif';
   ctx.fillStyle = theme.gold;
-  ctx.fillText('HACKER HOUSE', width / 2 - 30, 155);
+  ctx.fillText('HACKER HOUSE', width / 2 - 35, 138);
 
   // Hot Pink "गोवा" overlay badge
   ctx.save();
   ctx.fillStyle = theme.pink;
-  ctx.font = '900 40px "Rozha One", serif, "Outfit"';
+  ctx.font = '900 44px "Rozha One", serif, "Outfit"';
   ctx.shadowColor = theme.pink;
   ctx.shadowBlur = 10;
-  ctx.fillText('गोवा', width / 2 + 180, 155);
+  ctx.fillText('गोवा', width / 2 + 195, 138);
   ctx.restore();
 
   // Date Subhead
   ctx.fillStyle = theme.gold;
-  ctx.font = '700 18px "JetBrains Mono", monospace';
-  ctx.fillText('28 - 31 OCT 2026', width / 2, 195);
+  ctx.font = '700 20px "JetBrains Mono", monospace';
+  ctx.fillText('28 - 31 OCT 2026', width / 2, 184);
   ctx.restore();
 
-  // Photo Container
-  const photoX = (width - 540) / 2;
-  const photoY = 260;
-  const photoW = 540;
-  const photoH = 540;
+  // Photo Container (Enlarged to 620x620)
+  const photoW = 620;
+  const photoH = 620;
+  const photoX = (width - photoW) / 2;
+  const photoY = 250;
 
   ctx.save();
   drawRoundedRect(ctx, photoX, photoY, photoW, photoH, 24);
@@ -461,10 +536,10 @@ function renderFormatB() {
     const imgH = state.image.height;
     const aspect = imgW / imgH;
     
-    let drawW = photoW * 1.1;
+    let drawW = photoW;
     let drawH = drawW / aspect;
-    if (drawH < photoH * 1.1) {
-      drawH = photoH * 1.1;
+    if (drawH < photoH) {
+      drawH = photoH;
       drawW = drawH * aspect;
     }
 
@@ -479,9 +554,6 @@ function renderFormatB() {
   ctx.strokeStyle = theme.gold;
   drawRoundedRect(ctx, photoX, photoY, photoW, photoH, 24);
   ctx.stroke();
-
-  // Ornate Gold Corner Flourishes around Photo
-  drawCornerFlourishes(ctx, photoX, photoY, photoW, photoH, theme.gold, theme.pink);
   ctx.restore();
 
   // Builder Details Block
@@ -489,15 +561,15 @@ function renderFormatB() {
 
   // Name
   ctx.fillStyle = theme.gold;
-  ctx.font = '900 48px "Outfit", sans-serif';
+  ctx.font = '900 52px "Outfit", sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText(state.name || 'Anonymous Builder', textCenter, 860);
+  ctx.fillText(state.name || 'Anonymous Builder', textCenter, 930);
 
   // Builder Title (Pink)
   ctx.save();
-  ctx.font = '800 24px "Plus Jakarta Sans", sans-serif';
+  ctx.font = '800 26px "Plus Jakarta Sans", sans-serif';
   ctx.fillStyle = theme.pink;
-  ctx.fillText(state.title || 'Beach Buidler', textCenter, 905);
+  ctx.fillText(state.title || 'Beach Buidler', textCenter, 975);
   ctx.restore();
 
   // Stack & Skills Pill
@@ -505,28 +577,28 @@ function renderFormatB() {
   ctx.fillStyle = 'rgba(245, 206, 21, 0.1)';
   ctx.strokeStyle = theme.gold;
   ctx.lineWidth = 2;
-  const stackW = Math.max(320, ctx.measureText(state.stack || 'Fullstack').width + 60);
-  drawRoundedRect(ctx, textCenter - stackW / 2, 935, stackW, 46, 23);
+  const stackW = Math.max(360, ctx.measureText(state.stack || 'Fullstack').width + 70);
+  drawRoundedRect(ctx, textCenter - stackW / 2, 1005, stackW, 50, 25);
   ctx.fill();
   ctx.stroke();
 
   ctx.fillStyle = '#FFFFFF';
-  ctx.font = '700 20px "JetBrains Mono", monospace';
-  ctx.fillText(state.stack || 'Rust • AI • Web3', textCenter, 965);
+  ctx.font = '700 22px "JetBrains Mono", monospace';
+  ctx.fillText(state.stack || 'Rust • AI • Web3', textCenter, 1038);
   ctx.restore();
 
   // Handle
   ctx.fillStyle = theme.gold;
-  ctx.font = '700 22px "Plus Jakarta Sans", sans-serif';
-  ctx.fillText(`@${state.handle || 'buidler_goa'}`, textCenter, 1020);
+  ctx.font = '700 26px "Plus Jakarta Sans", sans-serif';
+  ctx.fillText(`@${state.handle || 'buidler_goa'}`, textCenter, 1100);
 
-  // Barcode Visual
-  drawBarcode(ctx, textCenter - 260, 1060, 520, 70, theme.gold);
+  // Barcode Visual (Enlarged)
+  drawBarcode(ctx, textCenter - 290, 1140, 580, 80, theme.gold);
 
   // Footer Hashtag
   ctx.fillStyle = theme.pink;
-  ctx.font = '700 18px "JetBrains Mono", monospace';
-  ctx.fillText('#FrameInGoa • Official Builder Pass', textCenter, 1180);
+  ctx.font = '700 20px "JetBrains Mono", monospace';
+  ctx.fillText('#FrameInGoa • Official Builder Pass', textCenter, 1285);
 }
 
 // Draw Outer Polka-Dot Frame Matching Poster
@@ -591,44 +663,10 @@ function drawOfficialArchedFrame(ctx, w, h, theme, radius) {
   ctx.stroke();
   ctx.setLineDash([]);
 
-  // Top Floral Flourish Motifs (Gold & Pink Lotus)
-  drawLotusMotif(ctx, cx, cy - radius - 20, theme.pink, theme.gold);
-  drawLotusMotif(ctx, cx - radius, cy, theme.pink, theme.gold);
-  drawLotusMotif(ctx, cx + radius, cy, theme.pink, theme.gold);
-  drawLotusMotif(ctx, cx, cy + radius + 20, theme.pink, theme.gold);
-
   ctx.restore();
 }
 
-function drawLotusMotif(ctx, x, y, pinkColor, goldColor) {
-  ctx.save();
-  ctx.fillStyle = pinkColor;
-  ctx.beginPath();
-  ctx.arc(x, y, 12, 0, Math.PI * 2);
-  ctx.fill();
 
-  ctx.fillStyle = goldColor;
-  ctx.beginPath();
-  ctx.arc(x, y, 5, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
-}
-
-function drawCornerFlourishes(ctx, x, y, w, h, goldColor, pinkColor) {
-  ctx.save();
-  ctx.fillStyle = pinkColor;
-  
-  // Top Left
-  ctx.beginPath(); ctx.arc(x + 10, y + 10, 8, 0, Math.PI * 2); ctx.fill();
-  // Top Right
-  ctx.beginPath(); ctx.arc(x + w - 10, y + 10, 8, 0, Math.PI * 2); ctx.fill();
-  // Bottom Left
-  ctx.beginPath(); ctx.arc(x + 10, y + h - 10, 8, 0, Math.PI * 2); ctx.fill();
-  // Bottom Right
-  ctx.beginPath(); ctx.arc(x + w - 10, y + h - 10, 8, 0, Math.PI * 2); ctx.fill();
-
-  ctx.restore();
-}
 
 // Draw Official Branded Title Badge (HACKER HOUSE + pink "गोवा")
 function drawOfficialBrandedBadge(ctx, x, y, theme) {
@@ -733,6 +771,7 @@ function copyCaption() {
 
 document.addEventListener('DOMContentLoaded', () => {
   setupEventListeners();
+  setFormat(state.format);
   initDefaultImage();
   updateCaption();
 });
