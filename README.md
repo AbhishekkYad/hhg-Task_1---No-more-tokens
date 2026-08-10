@@ -63,7 +63,7 @@ Make sure you have [Node.js](https://nodejs.org/) installed on your system.
 ### Steps
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/YOUR_USERNAME/hh-goa-2026-badge.git
+   git clone https://github.com/AbhishekkYad/hh-goa-2026-badge.git
    cd hh-goa-2026-badge
    ```
 
