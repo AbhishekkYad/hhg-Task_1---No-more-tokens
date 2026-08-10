@@ -126,7 +126,7 @@ body::before {
 
 /* Custom Scrollbars Matching Page Color Theme (Emerald & Gold) */
 ::-webkit-scrollbar {
-  width: 8px;
+  width: 16px;
   height: 8px;
 }
 
@@ -136,15 +136,17 @@ body::before {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, var(--color-gold), #d8b209);
+  background: linear-gradient(to bottom, transparent 0px, var(--color-gold) 16px, #d8b209 calc(100% - 16px), transparent 100%);
   border-radius: 8px;
-  border: 4px solid transparent;
+  border: none;
+  border-right: 8px solid transparent;
   background-clip: content-box;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, var(--color-gold-bright), var(--color-gold));
-  border: 4px solid transparent;
+  background: linear-gradient(to bottom, transparent 0px, var(--color-gold-bright) 16px, var(--color-gold) calc(100% - 16px), transparent 100%);
+  border: none;
+  border-right: 8px solid transparent;
   background-clip: content-box;
 }
 
@@ -172,10 +174,11 @@ body::before {
   border: 2px solid var(--border-gold);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-card);
-  padding: 28px;
+  padding: 28px 32px 28px 28px;
   transition: border-color 0.3s ease, box-shadow 0.3s ease;
   max-height: min(640px, calc(100vh - 180px));
   overflow-y: auto;
+  scrollbar-gutter: stable;
 }
 
 .glass-card:hover {
@@ -203,16 +206,21 @@ body::before {
 }
 
 .logo-icon {
-  width: 52px;
-  height: 52px;
-  border-radius: 14px;
-  background: linear-gradient(135deg, var(--color-gold), var(--color-pink));
+  height: 64px;
+  width: auto;
+  background: transparent;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 24px;
-  color: #062413;
-  box-shadow: var(--shadow-glow-pink);
+  padding: 0;
+  overflow: visible;
+}
+
+.brand-logo-img {
+  height: 64px;
+  width: auto;
+  max-width: 220px;
+  object-fit: contain;
 }
 
 .brand-text {
