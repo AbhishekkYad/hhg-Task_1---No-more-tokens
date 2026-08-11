@@ -855,9 +855,13 @@ async function getCatboxImageUrl(forceFresh = false) {
   const filename = state.format === 'format-a' ? 'hh-goa-pfp.png' : 'hh-goa-pass.png';
   const base64Image = canvas.toDataURL('image/png', 1.0);
 
-  // 1. Primary: Server-Side Catbox Upload via local Express on port 3000 (No Browser CORS!)
+  const uploadApiUrl = window.location.hostname.includes('localhost') 
+    ? 'http://localhost:3000/api/upload' 
+    : '/api/upload';
+
+  // 1. Primary: Server-Side Catbox Upload via Vercel Serverless / Express (No Browser CORS!)
   try {
-    const res = await fetch('http://localhost:3000/api/upload', {
+    const res = await fetch(uploadApiUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ image: base64Image })
@@ -868,11 +872,11 @@ async function getCatboxImageUrl(forceFresh = false) {
       state.publicImageUrl = cleanUrl;
       window.generatedPublicUrl = cleanUrl;
       updateCaption();
-      console.log('[Express Server Upload Success]:', cleanUrl);
+      console.log('[Server Upload Success]:', cleanUrl);
       return cleanUrl;
     }
   } catch (serverErr) {
-    console.warn('[Local Server Notice] Trying direct browser upload fallback...', serverErr);
+    console.warn('[Server Notice] Trying direct browser upload fallback...', serverErr);
   }
 
   // 2. Fallback: Direct Browser Catbox Upload
