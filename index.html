@@ -13,6 +13,7 @@
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Hacker House Goa 2026 — Graphic Generator">
   <meta name="twitter:description" content="Get your official HH Goa 2026 PFP frame & Builder ID card to share on X! #FrameInGoa">
+  <meta name="twitter:image" content="https://preview.redd.it/hacker-house-goa-2026-v0-93vdwnle2mfh1.png?width=1080&crop=smart&auto=webp&s=9d9951e351a0ea042252cf8bed3f619cab821dbb">
 
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -92,9 +93,33 @@
           </button>
         </div>
 
+        <!-- Frame Style Selector -->
+        <div class="section-title">
+          <i class="fa-solid fa-crop-simple"></i> 3. Select Frame Style
+        </div>
+
+        <div class="frame-selector">
+          <button type="button" class="frame-chip active" data-frame="classic-arch" title="Classic Official Poster Arch">
+            <div class="frame-preview-icon frame-icon-classic"></div>
+            <span>Classic Arch</span>
+          </button>
+          <button type="button" class="frame-chip" data-frame="goa-sunset-palms" title="Goa Beach &amp; Dual Coconut Palms Frame">
+            <div class="frame-preview-icon frame-icon-palms"></div>
+            <span>Goa Sunset Palms</span>
+          </button>
+          <button type="button" class="frame-chip" data-frame="anjuna-neon-rave" title="Anjuna Psytrance Neon Mandala &amp; Waves Frame">
+            <div class="frame-preview-icon frame-icon-psy"></div>
+            <span>Anjuna Psy Vibe</span>
+          </button>
+          <button type="button" class="frame-chip" data-frame="vintage-stamp" title="Perforated Postage Stamp Frame">
+            <div class="frame-preview-icon frame-icon-stamp"></div>
+            <span>Vintage Stamp</span>
+          </button>
+        </div>
+
         <!-- Photo Upload Box -->
         <div class="section-title">
-          <i class="fa-solid fa-cloud-arrow-up"></i> 3. Upload Photo
+          <i class="fa-solid fa-cloud-arrow-up"></i> 4. Upload Photo
         </div>
 
         <div class="upload-area" id="uploadArea">
@@ -113,7 +138,7 @@
         <!-- Format B Fields (Visible only for Format B) -->
         <div class="format-b-fields hidden" id="formatBFields">
           <div class="section-title">
-            <i class="fa-solid fa-address-card"></i> 4. Builder Pass Details
+            <i class="fa-solid fa-address-card"></i> 5. Builder Pass Details
           </div>
 
           <div class="form-group">
@@ -231,8 +256,12 @@
             <i class="fa-solid fa-download"></i> Download Official Graphic
           </button>
 
-          <button type="button" class="btn-share-x btn-large" id="btnShareX">
+          <a href="https://x.com/intent/tweet?text=Just%20generated%20my%20official%20%40HackerHouseGoa%202026%20PFP!%20%F0%9F%8C%B4%F0%9F%9A%80%20Ready%20to%20build%20in%20Goa!%20%23FrameInGoa%20%23HackerHouseGoa" target="_blank" rel="noopener noreferrer" class="btn-share-x btn-large" id="btnShareX">
             <i class="fa-brands fa-x-twitter"></i> Share on X (#FrameInGoa)
+          </a>
+
+          <button type="button" class="btn-secondary btn-large" id="btnCopyPublicLink">
+            <i class="fa-solid fa-link"></i> Copy Public Image Link
           </button>
         </div>
 

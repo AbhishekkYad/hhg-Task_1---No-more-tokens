@@ -6,6 +6,7 @@
 const state = {
   format: 'format-a', // 'format-a' (PFP Overlay) or 'format-b' (Builder Pass)
   theme: 'goa-emerald', // 'goa-emerald', 'sunset-gold', 'cyber-lime', 'royal-pink'
+  frame: 'classic-arch', // 'classic-arch', 'tropical-wave', 'golden-laurel', 'minimal-sleek', 'vintage-stamp'
   image: null,
   panX: 0,
   panY: 0,
@@ -21,8 +22,22 @@ const state = {
   name: 'Team No More Tokens',
   stack: 'Rust • AI • Fullstack',
   handle: 'no_more_tokens',
-  title: 'AI & Web3 Sorcerer'
+  title: 'AI & Web3 Sorcerer',
+
+  // Background Public Image CDN URL
+  publicImageUrl: null
 };
+
+// Preload Goa Frame Image Assets
+const palmsFrameImg = new Image();
+palmsFrameImg.src = './frame-goa-palms.png';
+palmsFrameImg.onload = () => { if (typeof renderCanvas === 'function') renderCanvas(); };
+
+const anjunaRaveFrameImg = new Image();
+anjunaRaveFrameImg.src = './frame-anjuna-rave.png';
+anjunaRaveFrameImg.onload = () => { if (typeof renderCanvas === 'function') renderCanvas(); };
+
+
 
 // Builder Titles List for Generator
 const FUN_TITLES = [
@@ -108,6 +123,7 @@ const formatBFields = document.getElementById('formatBFields');
 const btnDownload = document.getElementById('btnDownload');
 const btnShareX = document.getElementById('btnShareX');
 const btnCopyCaption = document.getElementById('btnCopyCaption');
+const btnCopyPublicLink = document.getElementById('btnCopyPublicLink');
 const captionPreviewText = document.getElementById('captionPreviewText');
 
 // Initialize Default User Avatar Image
@@ -131,6 +147,16 @@ function setupEventListeners() {
       const btn = e.currentTarget;
       btn.classList.add('active');
       state.theme = btn.dataset.theme;
+      renderCanvas();
+    });
+  });
+
+  document.querySelectorAll('.frame-chip').forEach(chip => {
+    chip.addEventListener('click', (e) => {
+      document.querySelectorAll('.frame-chip').forEach(c => c.classList.remove('active'));
+      const btn = e.currentTarget;
+      btn.classList.add('active');
+      state.frame = btn.dataset.frame;
       renderCanvas();
     });
   });
@@ -231,6 +257,9 @@ function setupEventListeners() {
   btnDownload.addEventListener('click', downloadCanvas);
   btnShareX.addEventListener('click', shareToX);
   btnCopyCaption.addEventListener('click', copyCaption);
+  if (btnCopyPublicLink) {
+    btnCopyPublicLink.addEventListener('click', copyPublicImageLink);
+  }
 }
 
 // Switch Format
@@ -306,8 +335,8 @@ function isPointInsidePhotoArea(clientX, clientY) {
 
   if (state.format === 'format-a') {
     const circleX = canvas.width / 2;
-    const circleY = canvas.height / 2;
-    const radius = 330;
+    const circleY = 425;
+    const radius = 295;
     const dx = canvasX - circleX;
     const dy = canvasY - circleY;
     return (dx * dx + dy * dy) <= (radius * radius);
@@ -343,7 +372,7 @@ function clampPan() {
 
   let frameW, frameH;
   if (state.format === 'format-a') {
-    const radius = 330;
+    const radius = 295;
     frameW = radius * 2;
     frameH = radius * 2;
   } else {
@@ -392,6 +421,9 @@ function renderCanvas() {
   } else {
     renderFormatB();
   }
+
+  // Trigger background CDN auto-upload for instant X preview card
+  triggerBackgroundSync();
 }
 
 // ==========================================================================
@@ -408,8 +440,8 @@ function renderFormatA() {
   // Save State for Circle Photo Mask
   ctx.save();
   const circleX = size / 2;
-  const circleY = size / 2;
-  const radius = 330;
+  const circleY = 420;
+  const radius = 290;
 
   ctx.beginPath();
   ctx.arc(circleX, circleY, radius, 0, Math.PI * 2);
@@ -439,22 +471,19 @@ function renderFormatA() {
   }
   ctx.restore();
 
-  // Draw Outer Polka-Dot Poster Frame
-  drawPolkaDotBorder(ctx, size, size, theme.gold, theme.pink);
+  // Draw Outer Polka-Dot Poster Frame or Custom Frame Overlay
+  drawSelectedFrameA(ctx, size, size, theme, radius, state.frame, circleX, circleY);
 
-  // Draw Ornate Arched Frame Overlay
-  drawOfficialArchedFrame(ctx, size, size, theme, radius);
-
-  // Top Location Header: "GOA, INDIA"
+  // Top Location Header: "GOA, INDIA" (Positioned at y=50 with generous breathing room clear of frame)
   ctx.save();
   ctx.fillStyle = theme.gold;
   ctx.font = '700 20px "JetBrains Mono", monospace';
   ctx.textAlign = 'center';
-  ctx.fillText('GOA, INDIA', size / 2, 70);
+  ctx.fillText('GOA, INDIA', size / 2, 50);
   ctx.restore();
 
   // Bottom Center Title Badge: "HACKER HOUSE" + Pink "गोवा" + Dates
-  drawOfficialBrandedBadge(ctx, size / 2, size - 110, theme);
+  drawOfficialBrandedBadge(ctx, size / 2, size - 75, theme);
 }
 
 // ==========================================================================
@@ -469,10 +498,10 @@ function renderFormatB() {
   ctx.fillStyle = theme.bg;
   ctx.fillRect(0, 0, width, height);
 
-  // Polka Dot Outer Frame
-  drawPolkaDotBorder(ctx, width, height, theme.gold, theme.pink);
+  // Outer Card Border matching selected frame style
+  drawOuterCardBorderB(ctx, width, height, theme, state.frame);
 
-  // Outer Ornate Card Border (Expanded to match frame dimensions)
+  // Outer Ornate Card Border
   ctx.save();
   ctx.strokeStyle = theme.gold;
   ctx.lineWidth = 6;
@@ -515,19 +544,28 @@ function renderFormatB() {
   ctx.fillText('28 - 31 OCT 2026', width / 2, 184);
   ctx.restore();
 
-  // Photo Container (Enlarged to 620x620)
+  // Photo Container (620x620)
   const photoW = 620;
   const photoH = 620;
   const photoX = (width - photoW) / 2;
   const photoY = 250;
+  const cx = photoX + photoW / 2;
+  const cy = photoY + photoH / 2;
 
   ctx.save();
-  drawRoundedRect(ctx, photoX, photoY, photoW, photoH, 24);
-  ctx.clip();
+  if (state.frame === 'goa-sunset-palms') {
+    ctx.beginPath();
+    ctx.arc(cx, cy, 270, 0, Math.PI * 2);
+    ctx.clip();
+
+  } else {
+    drawRoundedRect(ctx, photoX, photoY, photoW, photoH, 24);
+    ctx.clip();
+  }
 
   if (state.image) {
     ctx.save();
-    ctx.translate(photoX + photoW / 2 + state.panX, photoY + photoH / 2 + state.panY);
+    ctx.translate(cx + state.panX, cy + state.panY);
     ctx.rotate((state.rotate * Math.PI) / 180);
     ctx.scale(state.scale, state.scale);
     ctx.filter = `brightness(${state.brightness}%) contrast(${state.contrast}%)`;
@@ -548,13 +586,8 @@ function renderFormatB() {
   }
   ctx.restore();
 
-  // Photo Frame Ornate Border
-  ctx.save();
-  ctx.lineWidth = 6;
-  ctx.strokeStyle = theme.gold;
-  drawRoundedRect(ctx, photoX, photoY, photoW, photoH, 24);
-  ctx.stroke();
-  ctx.restore();
+  // Photo Frame Border matching frame style
+  drawSelectedFrameB(ctx, width, height, theme, photoX, photoY, photoW, photoH, state.frame, cx, cy);
 
   // Builder Details Block
   const textCenter = width / 2;
@@ -642,10 +675,10 @@ function drawPolkaDotBorder(ctx, w, h, goldColor, pinkColor) {
 }
 
 // Draw Ornate Arched Frame Matching Official Poster
-function drawOfficialArchedFrame(ctx, w, h, theme, radius) {
+function drawOfficialArchedFrame(ctx, w, h, theme, radius, circleX, circleY) {
   ctx.save();
-  const cx = w / 2;
-  const cy = h / 2;
+  const cx = circleX || w / 2;
+  const cy = circleY || h / 2;
 
   // Outer Arched Ring in Gold
   ctx.lineWidth = 14;
@@ -743,10 +776,57 @@ function downloadCanvas() {
   link.click();
 }
 
-function shareToX() {
-  const caption = captionPreviewText.textContent.trim();
-  const tweetUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(caption)}`;
-  window.open(tweetUrl, '_blank', 'noopener,noreferrer');
+function shareToX(e) {
+  showToast('🚀 Opening X tweet composer with your graphic preview card!');
+}
+
+let syncDebounceTimer = null;
+
+function triggerBackgroundSync() {
+  clearTimeout(syncDebounceTimer);
+  syncDebounceTimer = setTimeout(() => {
+    syncPublicImageLink();
+  }, 400);
+}
+
+async function syncPublicImageLink() {
+  try {
+    const filename = state.format === 'format-a' ? 'hh-goa-pfp.png' : 'hh-goa-pass.png';
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png', 0.95));
+    if (!blob) return;
+
+    const formData = new FormData();
+    formData.append('file', blob, filename);
+
+    const response = await fetch('https://tmpfiles.org/api/v1/upload', {
+      method: 'POST',
+      body: formData
+    });
+
+    const data = await response.json();
+
+    if (data && data.status === 'success' && data.data && data.data.url) {
+      state.publicImageUrl = data.data.url.replace('tmpfiles.org/', 'tmpfiles.org/dl/');
+      updateCaption();
+    }
+  } catch (err) {
+    console.log('Background CDN sync error:', err);
+  }
+}
+
+function showToast(message) {
+  let toast = document.getElementById('appToast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'appToast';
+    toast.className = 'app-toast';
+    document.body.appendChild(toast);
+  }
+  toast.textContent = message;
+  toast.classList.add('show');
+  setTimeout(() => {
+    toast.classList.remove('show');
+  }, 4500);
 }
 
 function updateCaption() {
@@ -757,6 +837,12 @@ function updateCaption() {
     text = `Claimed my @HackerHouseGoa 2026 Builder Pass as "${state.title || 'Buidler'}"! 🌴⚡ See you in Goa! @${state.handle || 'buidler_goa'} #FrameInGoa #HackerHouseGoa`;
   }
   captionPreviewText.textContent = text;
+  if (btnShareX) {
+    const origin = window.location.origin;
+    const ogEndpoint = `${origin}/api/og?format=${state.format}&theme=${state.theme}&frame=${state.frame}&name=${encodeURIComponent(state.name || '')}&title=${encodeURIComponent(state.title || '')}&handle=${encodeURIComponent(state.handle || '')}`;
+    const shareUrl = state.publicImageUrl || ogEndpoint;
+    btnShareX.href = `https://x.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(shareUrl)}`;
+  }
 }
 
 function copyCaption() {
@@ -767,6 +853,476 @@ function copyCaption() {
       btnCopyCaption.innerHTML = '<i class="fa-regular fa-copy"></i> Copy';
     }, 2000);
   });
+}
+
+async function copyPublicImageLink() {
+  if (!btnCopyPublicLink) return;
+  const originalHtml = btnCopyPublicLink.innerHTML;
+  btnCopyPublicLink.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generating Public Link...';
+  
+  showToast('⚡ Uploading graphic for public HTTPS preview link...');
+
+  try {
+    const filename = state.format === 'format-a' ? 'hh-goa-pfp.png' : 'hh-goa-pass.png';
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png', 1.0));
+    
+    const formData = new FormData();
+    formData.append('file', blob, filename);
+
+    const response = await fetch('https://tmpfiles.org/api/v1/upload', {
+      method: 'POST',
+      body: formData
+    });
+
+    const data = await response.json();
+
+    if (data && data.status === 'success' && data.data && data.data.url) {
+      const publicImageUrl = data.data.url.replace('tmpfiles.org/', 'tmpfiles.org/dl/');
+      
+      await navigator.clipboard.writeText(publicImageUrl);
+      
+      btnCopyPublicLink.innerHTML = '<i class="fa-solid fa-check"></i> Public Link Copied!';
+      showToast('🔗 Direct public image URL copied to clipboard! Paste or open link anywhere to preview your graphic.');
+      
+      setTimeout(() => {
+        btnCopyPublicLink.innerHTML = originalHtml;
+      }, 3500);
+      return;
+    }
+  } catch (err) {
+    console.log('Public image link upload error:', err);
+  }
+
+  btnCopyPublicLink.innerHTML = originalHtml;
+  showToast('⚠️ Could not generate public link. Download PNG directly!');
+}
+
+// ==========================================================================
+// FRAME RENDERING DISPATCHERS & CUSTOM FRAME STYLES
+// ==========================================================================
+
+// Master Frame Renderer for Format A (PFP 800x800)
+function drawSelectedFrameA(ctx, w, h, theme, radius, frameStyle, circleX, circleY) {
+  const cx = circleX || w / 2;
+  const cy = circleY || h / 2;
+
+  switch (frameStyle) {
+    case 'goa-sunset-palms':
+      drawGoaSunsetPalmsFrameA(ctx, w, h, theme, radius, cx, cy);
+      break;
+    case 'anjuna-neon-rave':
+      drawAnjunaNeonRaveFrameA(ctx, w, h, theme, radius, cx, cy);
+      break;
+    case 'vintage-stamp':
+      drawVintageStampFrameA(ctx, w, h, theme, radius, cx, cy);
+      break;
+    case 'classic-arch':
+    default:
+      drawPolkaDotBorder(ctx, w, h, theme.gold, theme.pink);
+      drawOfficialArchedFrame(ctx, w, h, theme, radius, cx, cy);
+      break;
+  }
+}
+
+// Outer Card Border Dispatcher for Format B
+function drawOuterCardBorderB(ctx, w, h, theme, frameStyle) {
+  switch (frameStyle) {
+    case 'vintage-stamp':
+      drawStampBorderCanvas(ctx, w, h, theme.gold, theme.bg);
+      break;
+    case 'classic-arch':
+    case 'goa-sunset-palms':
+    case 'anjuna-neon-rave':
+    default:
+      drawPolkaDotBorder(ctx, w, h, theme.gold, theme.pink);
+      break;
+  }
+}
+
+// Master Frame Renderer for Format B (Builder Pass 1080x1350)
+function drawSelectedFrameB(ctx, w, h, theme, photoX, photoY, photoW, photoH, frameStyle, cx, cy) {
+  switch (frameStyle) {
+    case 'goa-sunset-palms':
+      drawGoaSunsetPalmsFrameB(ctx, w, h, theme, photoX, photoY, photoW, photoH, cx, cy);
+      break;
+    case 'anjuna-neon-rave':
+      drawAnjunaNeonRaveFrameB(ctx, w, h, theme, photoX, photoY, photoW, photoH);
+      break;
+    case 'vintage-stamp':
+      drawVintageStampFrameB(ctx, w, h, theme, photoX, photoY, photoW, photoH);
+      break;
+    case 'classic-arch':
+    default:
+      ctx.save();
+      ctx.lineWidth = 6;
+      ctx.strokeStyle = theme.gold;
+      drawRoundedRect(ctx, photoX, photoY, photoW, photoH, 24);
+      ctx.stroke();
+      ctx.restore();
+      break;
+  }
+}
+
+
+
+// 5. VINTAGE STAMP FRAME (Format A)
+function drawVintageStampFrameA(ctx, w, h, theme, radius, cx, cy) {
+  // Scalloped Stamp Outer Canvas Border (Chipped edge postal stamp)
+  drawStampBorderCanvas(ctx, w, h, theme.gold, theme.bg);
+
+  ctx.save();
+  // Perforated Circular Photo Stamp Border
+  const numPerf = 28;
+  ctx.fillStyle = theme.gold;
+  for (let i = 0; i < numPerf; i++) {
+    const angle = (i / numPerf) * Math.PI * 2;
+    const px = cx + (radius + 14) * Math.cos(angle);
+    const py = cy + (radius + 14) * Math.sin(angle);
+    ctx.beginPath();
+    ctx.arc(px, py, 7, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Inner Dotted Line
+  ctx.strokeStyle = theme.pink;
+  ctx.lineWidth = 3;
+  ctx.setLineDash([6, 6]);
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius + 24, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  ctx.restore();
+}
+
+// VINTAGE STAMP FRAME (Format B)
+function drawVintageStampFrameB(ctx, w, h, theme, photoX, photoY, photoW, photoH) {
+  ctx.save();
+  ctx.lineWidth = 4;
+  ctx.strokeStyle = theme.gold;
+  ctx.setLineDash([8, 8]);
+  drawRoundedRect(ctx, photoX - 6, photoY - 6, photoW + 12, photoH + 12, 16);
+  ctx.stroke();
+
+  ctx.setLineDash([]);
+  ctx.lineWidth = 4;
+  ctx.strokeStyle = theme.pink;
+  drawRoundedRect(ctx, photoX, photoY, photoW, photoH, 12);
+  ctx.stroke();
+  ctx.restore();
+}
+
+// Helper: Palm Frond
+function drawPalmFrond(ctx, x, y, color, rotation) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(rotation);
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
+  ctx.lineWidth = 3;
+
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.quadraticCurveTo(30, -20, 60, -10);
+  ctx.stroke();
+
+  for (let i = 1; i <= 5; i++) {
+    const offset = i * 10;
+    ctx.beginPath();
+    ctx.moveTo(offset, -offset / 2);
+    ctx.lineTo(offset + 12, -offset / 2 - 18);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+// Helper: Laurel Arc
+function drawLaurelArc(ctx, cx, cy, r, color) {
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
+  ctx.lineWidth = 2;
+
+  const leftAngles = [Math.PI * 0.6, Math.PI * 0.7, Math.PI * 0.8, Math.PI * 0.9];
+  leftAngles.forEach(ang => {
+    const lx = cx + r * Math.cos(ang);
+    const ly = cy + r * Math.sin(ang);
+    ctx.beginPath();
+    ctx.ellipse(lx, ly, 8, 4, ang + Math.PI / 4, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  const rightAngles = [Math.PI * 0.1, Math.PI * 0.2, Math.PI * 0.3, Math.PI * 0.4];
+  rightAngles.forEach(ang => {
+    const rx = cx + r * Math.cos(ang);
+    const ry = cy + r * Math.sin(ang);
+    ctx.beginPath();
+    ctx.ellipse(rx, ry, 8, 4, ang - Math.PI / 4, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  ctx.restore();
+}
+
+// Helper: Stamp Border for Canvas (Chipped Serrated Postal Stamp Edges)
+function drawStampBorderCanvas(ctx, w, h, borderColor, bgFill) {
+  ctx.save();
+  const borderWidth = 20;
+
+  // 1. Solid Outer Frame Strip
+  ctx.fillStyle = borderColor;
+  ctx.fillRect(0, 0, w, borderWidth);
+  ctx.fillRect(0, h - borderWidth, w, borderWidth);
+  ctx.fillRect(0, 0, borderWidth, h);
+  ctx.fillRect(w - borderWidth, 0, borderWidth, h);
+
+  // 2. Cut out semi-circle teeth along outer edges (y=0, y=h, x=0, x=w)
+  ctx.fillStyle = bgFill || '#062413';
+  const notchRadius = 7;
+  const step = 20;
+
+  // Top Edge Chipped Notches
+  for (let x = step / 2; x < w; x += step) {
+    ctx.beginPath();
+    ctx.arc(x, 0, notchRadius, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  // Bottom Edge Chipped Notches
+  for (let x = step / 2; x < w; x += step) {
+    ctx.beginPath();
+    ctx.arc(x, h, notchRadius, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  // Left Edge Chipped Notches
+  for (let y = step / 2; y < h; y += step) {
+    ctx.beginPath();
+    ctx.arc(0, y, notchRadius, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  // Right Edge Chipped Notches
+  for (let y = step / 2; y < h; y += step) {
+    ctx.beginPath();
+    ctx.arc(w, y, notchRadius, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // 3. Inner Dotted Perforated Line along border interior
+  ctx.strokeStyle = '#E6007E';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([6, 6]);
+  ctx.strokeRect(borderWidth + 3, borderWidth + 3, w - (borderWidth * 2 + 6), h - (borderWidth * 2 + 6));
+  ctx.setLineDash([]);
+
+  ctx.restore();
+}
+
+// ==========================================================================
+// DEDICATED GOA-THEMED FRAME IMPLEMENTATIONS
+// ==========================================================================
+
+// 6. GOA SUNSET PALMS FRAME (Format A)
+function drawGoaSunsetPalmsFrameA(ctx, w, h, theme, radius, cx, cy) {
+  drawPolkaDotBorder(ctx, w, h, theme.gold, theme.pink);
+
+  ctx.save();
+  if (palmsFrameImg.complete && palmsFrameImg.naturalWidth !== 0) {
+    const frameDim = (radius + 45) * 2;
+    ctx.drawImage(palmsFrameImg, cx - frameDim / 2, cy - frameDim / 2, frameDim, frameDim);
+  } else {
+    // Fallback if image loading
+    ctx.lineWidth = 8;
+    ctx.strokeStyle = theme.gold;
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius + 12, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+// GOA SUNSET PALMS FRAME (Format B)
+function drawGoaSunsetPalmsFrameB(ctx, w, h, theme, photoX, photoY, photoW, photoH, cx, cy) {
+  ctx.save();
+  if (palmsFrameImg.complete && palmsFrameImg.naturalWidth !== 0) {
+    const frameDim = 640;
+    const centerPointX = cx || (photoX + photoW / 2);
+    const centerPointY = cy || (photoY + photoH / 2);
+    ctx.drawImage(palmsFrameImg, centerPointX - frameDim / 2, centerPointY - frameDim / 2, frameDim, frameDim);
+  } else {
+    ctx.lineWidth = 6;
+    ctx.strokeStyle = theme.gold;
+    drawRoundedRect(ctx, photoX, photoY, photoW, photoH, 24);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+// 7. ANJUNA NEON RAVE FRAME (Format A)
+function drawAnjunaNeonRaveFrameA(ctx, w, h, theme, radius, cx, cy) {
+  ctx.save();
+  // Neon Cyber Outer Frame
+  ctx.strokeStyle = '#00F5FF';
+  ctx.lineWidth = 4;
+  ctx.strokeRect(16, 16, w - 32, h - 32);
+
+  // Soundwave Equalizer Bars in 4 Corners
+  drawEqualizerBars(ctx, 30, 30, theme.pink);
+  drawEqualizerBars(ctx, w - 90, 30, '#00F5FF');
+  drawEqualizerBars(ctx, 30, h - 50, '#00F5FF');
+  drawEqualizerBars(ctx, w - 90, h - 50, theme.pink);
+
+  // Psytrance Neon Pulsing Ring Overlay
+  ctx.strokeStyle = '#00F5FF';
+  ctx.lineWidth = 6;
+  ctx.shadowColor = '#00F5FF';
+  ctx.shadowBlur = 18;
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius + 12, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.strokeStyle = theme.pink;
+  ctx.lineWidth = 3;
+  ctx.shadowColor = theme.pink;
+  ctx.shadowBlur = 12;
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius + 22, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // 12 Glowing Starburst Frequency Dots along Arc
+  for (let i = 0; i < 12; i++) {
+    const angle = (i / 12) * Math.PI * 2;
+    const dx = cx + (radius + 22) * Math.cos(angle);
+    const dy = cy + (radius + 22) * Math.sin(angle);
+    ctx.fillStyle = i % 2 === 0 ? theme.gold : '#00F5FF';
+    ctx.beginPath();
+    ctx.arc(dx, dy, 5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  ctx.restore();
+}
+
+// ANJUNA NEON RAVE FRAME (Format B)
+function drawAnjunaNeonRaveFrameB(ctx, w, h, theme, photoX, photoY, photoW, photoH) {
+  ctx.save();
+  ctx.lineWidth = 6;
+  ctx.strokeStyle = '#00F5FF';
+  ctx.shadowColor = '#00F5FF';
+  ctx.shadowBlur = 14;
+  drawRoundedRect(ctx, photoX, photoY, photoW, photoH, 20);
+  ctx.stroke();
+
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = theme.pink;
+  ctx.shadowColor = theme.pink;
+  drawRoundedRect(ctx, photoX + 8, photoY + 8, photoW - 16, photoH - 16, 14);
+  ctx.stroke();
+  ctx.restore();
+}
+
+
+
+// Helper: Full Coconut Palm Tree
+function drawFullCoconutPalm(ctx, x, y, color, scaleFactor) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(scaleFactor < 0 ? -1 : 1, Math.abs(scaleFactor));
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
+  ctx.lineWidth = 3.5;
+
+  // Trunk
+  ctx.beginPath();
+  ctx.moveTo(0, 80);
+  ctx.quadraticCurveTo(-15, 20, -5, -60);
+  ctx.stroke();
+
+  // Leaves
+  const leaves = [-0.8, -0.4, 0, 0.4, 0.8];
+  leaves.forEach(angle => {
+    ctx.save();
+    ctx.translate(-5, -60);
+    ctx.rotate(angle);
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.quadraticCurveTo(-25, -20, -50, -10);
+    ctx.stroke();
+
+    for (let i = 1; i <= 6; i++) {
+      const pos = i * 7;
+      ctx.beginPath();
+      ctx.moveTo(-pos, -pos / 3);
+      ctx.lineTo(-pos - 8, -pos / 3 + 12);
+      ctx.stroke();
+    }
+    ctx.restore();
+  });
+  ctx.restore();
+}
+
+// Helper: Equalizer Bars for Anjuna Psy Rave
+function drawEqualizerBars(ctx, x, y, color) {
+  ctx.save();
+  ctx.fillStyle = color;
+  const heights = [18, 28, 14, 34, 22, 10];
+  heights.forEach((h, i) => {
+    ctx.fillRect(x + i * 8, y + (35 - h), 5, h);
+  });
+  ctx.restore();
+}
+
+// Helper: Azulejos Tile Corner Pattern
+function drawTileCorner(ctx, x, y, color) {
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(x, y, 10, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(x - 12, y); ctx.lineTo(x + 12, y);
+  ctx.moveTo(x, y - 12); ctx.lineTo(x, y + 12);
+  ctx.stroke();
+  ctx.restore();
+}
+
+// Helper: Azulejos Border Canvas Pattern
+function drawAzulejosBorderCanvas(ctx, w, h, goldColor, bgFill, pinkColor) {
+  ctx.save();
+  const bw = 20;
+
+  // Outer Border Strips
+  ctx.fillStyle = goldColor;
+  ctx.fillRect(0, 0, w, bw);
+  ctx.fillRect(0, h - bw, w, bw);
+  ctx.fillRect(0, 0, bw, h);
+  ctx.fillRect(w - bw, 0, bw, h);
+
+  // Geometric Azulejos Diamond Tiles inside border
+  ctx.fillStyle = pinkColor;
+  const step = 20;
+
+  for (let x = step / 2; x < w; x += step) {
+    drawDiamond(ctx, x, bw / 2, 5, pinkColor);
+    drawDiamond(ctx, x, h - bw / 2, 5, pinkColor);
+  }
+  for (let y = step / 2; y < h; y += step) {
+    drawDiamond(ctx, bw / 2, y, 5, pinkColor);
+    drawDiamond(ctx, w - bw / 2, y, 5, pinkColor);
+  }
+  ctx.restore();
+}
+
+function drawDiamond(ctx, cx, cy, size, color) {
+  ctx.save();
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(cx, cy - size);
+  ctx.lineTo(cx + size, cy);
+  ctx.lineTo(cx, cy + size);
+  ctx.lineTo(cx - size, cy);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
 }
 
 document.addEventListener('DOMContentLoaded', () => {
