@@ -414,6 +414,10 @@ function endDrag() {
 
 // Master Render Function
 function renderCanvas() {
+  // Reset cached URLs on canvas render so edits generate a fresh new link
+  state.publicImageUrl = null;
+  window.generatedPublicUrl = null;
+
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   if (state.format === 'format-a') {
@@ -589,41 +593,46 @@ function renderFormatB() {
   // Photo Frame Border matching frame style
   drawSelectedFrameB(ctx, width, height, theme, photoX, photoY, photoW, photoH, state.frame, cx, cy);
 
-  // Builder Details Block
+  // Builder Details Block (Auto-Fitted to NEVER overflow card boundaries)
   const textCenter = width / 2;
+  const maxContentW = 640;
 
-  // Name
-  ctx.fillStyle = theme.gold;
-  ctx.font = '900 52px "Outfit", sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText(state.name || 'Anonymous Builder', textCenter, 930);
+  // Name (Auto-Fitted)
+  drawAutoFittedText(ctx, state.name || 'Anonymous Builder', textCenter, 930, maxContentW, 52, '"Outfit", sans-serif', '900', theme.gold);
 
-  // Builder Title (Pink)
+  // Builder Title (Auto-Fitted)
+  drawAutoFittedText(ctx, state.title || 'Beach Buidler', textCenter, 975, maxContentW, 26, '"Plus Jakarta Sans", sans-serif', '800', theme.pink);
+
+  // Stack & Skills Pill (Strictly Capped at 560px max width so it NEVER crosses card border)
   ctx.save();
-  ctx.font = '800 26px "Plus Jakarta Sans", sans-serif';
-  ctx.fillStyle = theme.pink;
-  ctx.fillText(state.title || 'Beach Buidler', textCenter, 975);
-  ctx.restore();
+  const maxStackPillW = 560;
+  const stackText = state.stack || 'Rust • AI • Web3';
+  
+  let stackFontSize = 22;
+  ctx.font = `700 ${stackFontSize}px "JetBrains Mono", monospace`;
+  while (ctx.measureText(stackText).width > maxStackPillW - 60 && stackFontSize > 13) {
+    stackFontSize -= 1;
+    ctx.font = `700 ${stackFontSize}px "JetBrains Mono", monospace`;
+  }
+  
+  const textWidth = ctx.measureText(stackText).width;
+  const stackPillW = Math.min(maxStackPillW, textWidth + 50);
 
-  // Stack & Skills Pill
-  ctx.save();
   ctx.fillStyle = 'rgba(245, 206, 21, 0.1)';
   ctx.strokeStyle = theme.gold;
   ctx.lineWidth = 2;
-  const stackW = Math.max(360, ctx.measureText(state.stack || 'Fullstack').width + 70);
-  drawRoundedRect(ctx, textCenter - stackW / 2, 1005, stackW, 50, 25);
+  drawRoundedRect(ctx, textCenter - stackPillW / 2, 1005, stackPillW, 50, 25);
   ctx.fill();
   ctx.stroke();
 
   ctx.fillStyle = '#FFFFFF';
-  ctx.font = '700 22px "JetBrains Mono", monospace';
-  ctx.fillText(state.stack || 'Rust • AI • Web3', textCenter, 1038);
+  ctx.font = `700 ${stackFontSize}px "JetBrains Mono", monospace`;
+  ctx.textAlign = 'center';
+  ctx.fillText(stackText, textCenter, 1037);
   ctx.restore();
 
-  // Handle
-  ctx.fillStyle = theme.gold;
-  ctx.font = '700 26px "Plus Jakarta Sans", sans-serif';
-  ctx.fillText(`@${state.handle || 'buidler_goa'}`, textCenter, 1100);
+  // Handle (Auto-Fitted)
+  drawAutoFittedText(ctx, `@${state.handle || 'buidler_goa'}`, textCenter, 1100, maxContentW, 26, '"Plus Jakarta Sans", sans-serif', '700', theme.gold);
 
   // Barcode Visual (Enlarged)
   drawBarcode(ctx, textCenter - 290, 1140, 580, 80, theme.gold);
@@ -632,6 +641,24 @@ function renderFormatB() {
   ctx.fillStyle = theme.pink;
   ctx.font = '700 20px "JetBrains Mono", monospace';
   ctx.fillText('#FrameInGoa • Official Builder Pass', textCenter, 1285);
+}
+
+// Auto-Fit Text Helper to ensure zero canvas overflow
+function drawAutoFittedText(ctx, text, x, y, maxW, baseFontSize, fontFace, weight, color) {
+  ctx.save();
+  let fontSize = baseFontSize;
+  ctx.font = `${weight} ${fontSize}px ${fontFace}`;
+  
+  while (ctx.measureText(text).width > maxW && fontSize > 14) {
+    fontSize -= 1;
+    ctx.font = `${weight} ${fontSize}px ${fontFace}`;
+  }
+
+  ctx.fillStyle = color;
+  ctx.textAlign = 'center';
+  ctx.fillText(text, x, y);
+  ctx.restore();
+  return fontSize;
 }
 
 // Draw Outer Polka-Dot Frame Matching Poster
@@ -746,21 +773,57 @@ function drawRoundedRect(ctx, x, y, width, height, radius) {
   ctx.closePath();
 }
 
+// Dynamic Unique Barcode & Ticket ID Generator
 function drawBarcode(ctx, x, y, w, h, color) {
   ctx.save();
-  ctx.fillStyle = color;
-  ctx.globalAlpha = 0.9;
 
+  // Convert builder's name and tech stack to numeric hash seed
+  const str = (state.name || 'builder') + (state.stack || 'stack');
+  let numSeed = 0;
+  for (let i = 0; i < str.length; i++) {
+    numSeed += str.charCodeAt(i) * (i + 1);
+  }
+  numSeed = Math.abs(numSeed);
+
+  // Generate unique 6-digit hex code e.g. "HHG2026-9E4F12"
+  const hexHash = ((numSeed * 2654435761) % 4294967296).toString(16).toUpperCase().padStart(6, '0').slice(0, 6);
+  const ticketId = `PASS ID: HHG2026-${hexHash}`;
+
+  // PRNG from numeric seed
+  let seed = numSeed;
+  const nextNum = (min, max) => {
+    seed = (seed * 9301 + 49297) % 233280;
+    const rnd = seed / 233280;
+    return Math.floor(min + rnd * (max - min + 1));
+  };
+
+  // Barcode lines pattern
+  const pattern = [2, 1, 1, 3];
+  for (let i = 0; i < 28; i++) {
+    pattern.push(nextNum(1, 4));
+  }
+  pattern.push(2, 1, 2);
+
+  const totalUnits = pattern.reduce((a, b) => a + b, 0);
+  const unit = w / totalUnits;
+  const barcodeH = h - 22;
+
+  ctx.fillStyle = color;
+  ctx.globalAlpha = 0.95;
   let currentX = x;
-  const pattern = [3, 1, 4, 1, 2, 5, 2, 1, 3, 2, 4, 1, 2, 3, 1, 4, 2, 1, 3, 5, 1, 2];
-  const unit = w / pattern.reduce((a, b) => a + b, 0);
 
   pattern.forEach((widthUnits, i) => {
     if (i % 2 === 0) {
-      ctx.fillRect(currentX, y, widthUnits * unit, h);
+      ctx.fillRect(currentX, y, widthUnits * unit, barcodeH);
     }
     currentX += widthUnits * unit;
   });
+
+  ctx.globalAlpha = 1.0;
+  ctx.fillStyle = color;
+  ctx.font = '800 15px "JetBrains Mono", monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText(ticketId, x + w / 2, y + h - 2);
 
   ctx.restore();
 }
@@ -776,8 +839,123 @@ function downloadCanvas() {
   link.click();
 }
 
-function shareToX(e) {
-  showToast('🚀 Opening X tweet composer with your graphic preview card!');
+// Unified Helper to fetch or generate Catbox.moe Permanent Image URL
+async function getCatboxImageUrl(forceFresh = false) {
+  if (!forceFresh) {
+    if (state.publicImageUrl && state.publicImageUrl.includes('http')) {
+      window.generatedPublicUrl = state.publicImageUrl;
+      return state.publicImageUrl;
+    }
+    if (window.generatedPublicUrl && window.generatedPublicUrl.includes('http')) {
+      state.publicImageUrl = window.generatedPublicUrl;
+      return window.generatedPublicUrl;
+    }
+  }
+
+  const filename = state.format === 'format-a' ? 'hh-goa-pfp.png' : 'hh-goa-pass.png';
+  const base64Image = canvas.toDataURL('image/png', 1.0);
+
+  // 1. Primary: Server-Side Catbox Upload via local Express on port 3000 (No Browser CORS!)
+  try {
+    const res = await fetch('http://localhost:3000/api/upload', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image: base64Image })
+    });
+    const data = await res.json();
+    if (data.success && data.imageUrl) {
+      const cleanUrl = data.imageUrl;
+      state.publicImageUrl = cleanUrl;
+      window.generatedPublicUrl = cleanUrl;
+      updateCaption();
+      console.log('[Express Server Upload Success]:', cleanUrl);
+      return cleanUrl;
+    }
+  } catch (serverErr) {
+    console.warn('[Local Server Notice] Trying direct browser upload fallback...', serverErr);
+  }
+
+  // 2. Fallback: Direct Browser Catbox Upload
+  try {
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png', 0.95));
+    if (!blob) return null;
+
+    const formData = new FormData();
+    formData.append('reqtype', 'fileupload');
+    formData.append('fileToUpload', blob, filename);
+
+    const response = await fetch('https://catbox.moe/user/api.php', {
+      method: 'POST',
+      body: formData
+    });
+
+    const permUrl = await response.text();
+    if (permUrl && permUrl.trim().startsWith('http')) {
+      const cleanUrl = permUrl.trim();
+      state.publicImageUrl = cleanUrl;
+      window.generatedPublicUrl = cleanUrl;
+      updateCaption();
+      return cleanUrl;
+    }
+  } catch (catboxErr) {
+    console.warn('[Direct Catbox Notice]:', catboxErr);
+  }
+
+  return null;
+}
+
+async function shareToX(e) {
+  if (e) e.preventDefault();
+
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  const caption = captionPreviewText.textContent.trim();
+  const filename = state.format === 'format-a' ? 'hh-goa-pfp.png' : 'hh-goa-pass.png';
+  const origText = btnShareX.innerHTML;
+
+  // On Mobile / Android: Attach actual photo file directly into the X Android App
+  if (isMobile && navigator.canShare) {
+    try {
+      const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png', 1.0));
+      const imageFile = new File([blob], filename, { type: 'image/png' });
+      
+      if (navigator.canShare({ files: [imageFile] })) {
+        await navigator.share({
+          title: 'Hacker House Goa 2026',
+          text: caption,
+          files: [imageFile]
+        });
+        return;
+      }
+    } catch (err) {
+      console.log('Native Android share fallback:', err);
+    }
+  }
+
+  // Show loading indicator on button
+  btnShareX.disabled = true;
+  btnShareX.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Uploading to Catbox...';
+
+  try {
+    // Force fresh new Catbox upload so every click gets a unique link
+    const catboxUrl = await getCatboxImageUrl(true);
+
+    // Base caption without old image links
+    let baseCaption = caption.split('\n\nImage 📸:')[0].trim();
+    let fullTweetText = baseCaption;
+    if (catboxUrl) {
+      fullTweetText += `\n\nImage 📸: ${catboxUrl}`;
+    }
+
+    const tweetUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(fullTweetText)}`;
+    window.open(tweetUrl, '_blank', 'noopener,noreferrer');
+  } catch (err) {
+    console.error('Share to X error:', err);
+    const tweetUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(caption)}`;
+    window.open(tweetUrl, '_blank', 'noopener,noreferrer');
+  } finally {
+    btnShareX.disabled = false;
+    btnShareX.innerHTML = origText;
+  }
 }
 
 let syncDebounceTimer = null;
@@ -789,28 +967,12 @@ function triggerBackgroundSync() {
   }, 400);
 }
 
+// Upload canvas to Catbox.moe for Permanent Non-Expiring Image URLs
 async function syncPublicImageLink() {
   try {
-    const filename = state.format === 'format-a' ? 'hh-goa-pfp.png' : 'hh-goa-pass.png';
-    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png', 0.95));
-    if (!blob) return;
-
-    const formData = new FormData();
-    formData.append('file', blob, filename);
-
-    const response = await fetch('https://tmpfiles.org/api/v1/upload', {
-      method: 'POST',
-      body: formData
-    });
-
-    const data = await response.json();
-
-    if (data && data.status === 'success' && data.data && data.data.url) {
-      state.publicImageUrl = data.data.url.replace('tmpfiles.org/', 'tmpfiles.org/dl/');
-      updateCaption();
-    }
+    await getCatboxImageUrl();
   } catch (err) {
-    console.log('Background CDN sync error:', err);
+    console.log('Background Catbox CDN sync notice:', err);
   }
 }
 
@@ -836,13 +998,13 @@ function updateCaption() {
   } else {
     text = `Claimed my @HackerHouseGoa 2026 Builder Pass as "${state.title || 'Buidler'}"! 🌴⚡ See you in Goa! @${state.handle || 'buidler_goa'} #FrameInGoa #HackerHouseGoa`;
   }
-  captionPreviewText.textContent = text;
-  if (btnShareX) {
-    const origin = window.location.origin;
-    const ogEndpoint = `${origin}/api/og?format=${state.format}&theme=${state.theme}&frame=${state.frame}&name=${encodeURIComponent(state.name || '')}&title=${encodeURIComponent(state.title || '')}&handle=${encodeURIComponent(state.handle || '')}`;
-    const shareUrl = state.publicImageUrl || ogEndpoint;
-    btnShareX.href = `https://x.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(shareUrl)}`;
+  
+  const catboxUrl = state.publicImageUrl || window.generatedPublicUrl;
+  let fullText = text;
+  if (catboxUrl) {
+    fullText += `\n\nImage 📸: ${catboxUrl}`;
   }
+  captionPreviewText.textContent = fullText;
 }
 
 function copyCaption() {
@@ -858,33 +1020,23 @@ function copyCaption() {
 async function copyPublicImageLink() {
   if (!btnCopyPublicLink) return;
   const originalHtml = btnCopyPublicLink.innerHTML;
-  btnCopyPublicLink.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generating Public Link...';
+  btnCopyPublicLink.disabled = true;
+  btnCopyPublicLink.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generating Catbox Link...';
   
-  showToast('⚡ Uploading graphic for public HTTPS preview link...');
+  showToast('⚡ Generating permanent Catbox.moe public HTTPS link...');
 
   try {
-    const filename = state.format === 'format-a' ? 'hh-goa-pfp.png' : 'hh-goa-pass.png';
-    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png', 1.0));
-    
-    const formData = new FormData();
-    formData.append('file', blob, filename);
+    // Force fresh new Catbox upload
+    const catboxUrl = await getCatboxImageUrl(true);
 
-    const response = await fetch('https://tmpfiles.org/api/v1/upload', {
-      method: 'POST',
-      body: formData
-    });
-
-    const data = await response.json();
-
-    if (data && data.status === 'success' && data.data && data.data.url) {
-      const publicImageUrl = data.data.url.replace('tmpfiles.org/', 'tmpfiles.org/dl/');
+    if (catboxUrl) {
+      await navigator.clipboard.writeText(catboxUrl);
       
-      await navigator.clipboard.writeText(publicImageUrl);
-      
-      btnCopyPublicLink.innerHTML = '<i class="fa-solid fa-check"></i> Public Link Copied!';
-      showToast('🔗 Direct public image URL copied to clipboard! Paste or open link anywhere to preview your graphic.');
+      btnCopyPublicLink.innerHTML = '<i class="fa-solid fa-check"></i> Catbox Link Copied!';
+      showToast(`🔗 Catbox permanent URL copied: ${catboxUrl}`);
       
       setTimeout(() => {
+        btnCopyPublicLink.disabled = false;
         btnCopyPublicLink.innerHTML = originalHtml;
       }, 3500);
       return;
@@ -893,8 +1045,9 @@ async function copyPublicImageLink() {
     console.log('Public image link upload error:', err);
   }
 
+  btnCopyPublicLink.disabled = false;
   btnCopyPublicLink.innerHTML = originalHtml;
-  showToast('⚠️ Could not generate public link. Download PNG directly!');
+  showToast('⚠️ Could not generate Catbox link. Please try again!');
 }
 
 // ==========================================================================

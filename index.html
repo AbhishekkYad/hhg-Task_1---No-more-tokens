@@ -143,19 +143,19 @@
 
           <div class="form-group">
             <label for="inputName"><i class="fa-solid fa-signature"></i> Full Name / Alias</label>
-            <input type="text" id="inputName" placeholder="e.g. Satoshi Nakamoto" value="Team No More Tokens">
+            <input type="text" id="inputName" placeholder="e.g. Satoshi Nakamoto" value="Team No More Tokens" maxlength="28">
           </div>
 
           <div class="form-group">
             <label for="inputStack"><i class="fa-solid fa-code"></i> Stack & Skills</label>
-            <input type="text" id="inputStack" placeholder="e.g. Rust • Solana • AI" value="Rust • AI • Fullstack">
+            <input type="text" id="inputStack" placeholder="e.g. Rust • Solana • AI" value="Rust • AI • Fullstack" maxlength="32">
           </div>
 
           <div class="form-group">
             <label for="inputHandle"><i class="fa-brands fa-x-twitter"></i> X (Twitter) Handle</label>
             <div class="input-with-prefix">
               <span>@</span>
-              <input type="text" id="inputHandle" placeholder="username" value="no_more_tokens">
+              <input type="text" id="inputHandle" placeholder="username" value="no_more_tokens" maxlength="20">
             </div>
           </div>
 
@@ -166,7 +166,7 @@
                 <i class="fa-solid fa-dice"></i> Surprise Me
               </button>
             </div>
-            <input type="text" id="inputTitle" placeholder="e.g. Zero-Knowledge Alchemist" value="AI & Web3 Sorcerer">
+            <input type="text" id="inputTitle" placeholder="e.g. Zero-Knowledge Alchemist" value="AI & Web3 Sorcerer" maxlength="30">
           </div>
         </div>
 
@@ -256,9 +256,9 @@
             <i class="fa-solid fa-download"></i> Download Official Graphic
           </button>
 
-          <a href="https://x.com/intent/tweet?text=Just%20generated%20my%20official%20%40HackerHouseGoa%202026%20PFP!%20%F0%9F%8C%B4%F0%9F%9A%80%20Ready%20to%20build%20in%20Goa!%20%23FrameInGoa%20%23HackerHouseGoa" target="_blank" rel="noopener noreferrer" class="btn-share-x btn-large" id="btnShareX">
+          <button type="button" class="btn-share-x btn-large" id="btnShareX">
             <i class="fa-brands fa-x-twitter"></i> Share on X (#FrameInGoa)
-          </a>
+          </button>
 
           <button type="button" class="btn-secondary btn-large" id="btnCopyPublicLink">
             <i class="fa-solid fa-link"></i> Copy Public Image Link
