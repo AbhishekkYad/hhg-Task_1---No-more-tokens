@@ -2,6 +2,9 @@
 // HACKER HOUSE GOA 2026 — OFFICIAL POSTER GRAPHIC ENGINE (app.js)
 // ==========================================================================
 
+import defaultAvatarUrl from './default-avatar.png';
+import palmsFrameUrl from './frame-goa-palms.png';
+
 // State Management
 const state = {
   format: 'format-a', // 'format-a' (PFP Overlay) or 'format-b' (Builder Pass)
@@ -30,7 +33,7 @@ const state = {
 
 // Preload Goa Frame Image Assets
 const palmsFrameImg = new Image();
-palmsFrameImg.src = './frame-goa-palms.png';
+palmsFrameImg.src = palmsFrameUrl;
 palmsFrameImg.onload = () => { if (typeof renderCanvas === 'function') renderCanvas(); };
 
 const anjunaRaveFrameImg = new Image();
@@ -133,7 +136,7 @@ function initDefaultImage() {
     state.image = img;
     renderCanvas();
   };
-  img.src = './default-avatar.png?v=' + Date.now();
+  img.src = defaultAvatarUrl;
 }
 
 // Event Listeners Setup
