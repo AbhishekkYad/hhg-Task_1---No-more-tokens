@@ -79,7 +79,7 @@
         </div>
 
         <div class="theme-selector">
-          <button type="button" class="theme-chip active" data-theme="goa-emerald">
+          <button type="button" class="theme-chip" data-theme="goa-emerald">
             <span class="color-dot emerald-dot"></span> HHG Theme
           </button>
           <button type="button" class="theme-chip" data-theme="sunset-gold">
@@ -88,7 +88,7 @@
           <button type="button" class="theme-chip" data-theme="cyber-lime">
             <span class="color-dot cyber-dot"></span> Cyber Lime
           </button>
-          <button type="button" class="theme-chip" data-theme="royal-pink">
+          <button type="button" class="theme-chip active" data-theme="royal-pink">
             <span class="color-dot royal-dot"></span> Royal Pink
           </button>
         </div>
@@ -99,11 +99,11 @@
         </div>
 
         <div class="frame-selector">
-          <button type="button" class="frame-chip active" data-frame="classic-arch" title="Classic Official Poster Arch">
+          <button type="button" class="frame-chip" data-frame="classic-arch" title="Classic Official Poster Arch">
             <div class="frame-preview-icon frame-icon-classic"></div>
             <span>Classic Arch</span>
           </button>
-          <button type="button" class="frame-chip" data-frame="goa-sunset-palms" title="Goa Beach &amp; Dual Coconut Palms Frame">
+          <button type="button" class="frame-chip active" data-frame="goa-sunset-palms" title="Goa Beach &amp; Dual Coconut Palms Frame">
             <div class="frame-preview-icon frame-icon-palms"></div>
             <span>Goa Sunset Palms</span>
           </button>
@@ -142,8 +142,13 @@
           </div>
 
           <div class="form-group">
-            <label for="inputName"><i class="fa-solid fa-signature"></i> Full Name / Alias</label>
-            <input type="text" id="inputName" placeholder="e.g. Satoshi Nakamoto" value="Team No More Tokens" maxlength="28">
+            <label for="inputTeam"><i class="fa-solid fa-users"></i> Team Name</label>
+            <input type="text" id="inputTeam" placeholder="e.g. Team No More Tokens" value="Team No More Tokens" maxlength="28">
+          </div>
+
+          <div class="form-group">
+            <label for="inputName"><i class="fa-solid fa-user"></i> Full Name / Alias</label>
+            <input type="text" id="inputName" placeholder="e.g. Satish Jalan" value="" maxlength="28">
           </div>
 
           <div class="form-group">

@@ -5,8 +5,8 @@
 // State Management
 const state = {
   format: 'format-b', // 'format-a' (PFP Overlay) or 'format-b' (Builder Pass) default opens Builder ID Pass directly!
-  theme: 'goa-emerald', // 'goa-emerald', 'sunset-gold', 'cyber-lime', 'royal-pink'
-  frame: 'classic-arch', // 'classic-arch', 'tropical-wave', 'golden-laurel', 'minimal-sleek', 'vintage-stamp'
+  theme: 'royal-pink', // Default theme set to royal pink!
+  frame: 'goa-sunset-palms', // Default frame set to goa sunset palms!
   image: null,
   panX: 0,
   panY: 0,
@@ -19,7 +19,8 @@ const state = {
   dragStartY: 0,
   
   // Format B Builder Data
-  name: 'Team No More Tokens',
+  team: 'Team No More Tokens',
+  name: '', // Default full name is blank as requested!
   stack: 'Rust • AI • Fullstack',
   handle: 'no_more_tokens',
   title: 'AI & Web3 Sorcerer',
@@ -30,6 +31,7 @@ const state = {
 
 import framePalmsUrl from './frame-goa-palms.png';
 import frameAnjunaUrl from './frame-anjuna-rave.png';
+import frameHeritageUrl from './frame-goa-heritage.png';
 import defaultAvatarUrl from './default-avatar.png';
 import bgLighthouseUrl from './bg-lighthouse-fort.png';
 import bgSunsetUrl from './bg-sunset-palms.png';
@@ -43,6 +45,10 @@ palmsFrameImg.onload = () => { if (typeof renderCanvas === 'function') renderCan
 const anjunaRaveFrameImg = new Image();
 anjunaRaveFrameImg.src = frameAnjunaUrl;
 anjunaRaveFrameImg.onload = () => { if (typeof renderCanvas === 'function') renderCanvas(); };
+
+const heritageFrameImg = new Image();
+heritageFrameImg.src = frameHeritageUrl;
+heritageFrameImg.onload = () => { if (typeof renderCanvas === 'function') renderCanvas(); };
 
 const defaultAvatarImg = new Image();
 defaultAvatarImg.src = defaultAvatarUrl;
@@ -198,6 +204,15 @@ function setupEventListeners() {
       processFile(e.dataTransfer.files[0]);
     }
   });
+
+  const inputTeam = document.getElementById('inputTeam');
+  if (inputTeam) {
+    inputTeam.addEventListener('input', (e) => {
+      state.team = e.target.value;
+      updateCaption();
+      renderCanvas();
+    });
+  }
 
   inputName.addEventListener('input', (e) => { state.name = e.target.value; updateCaption(); renderCanvas(); });
   inputStack.addEventListener('input', (e) => { state.stack = e.target.value; renderCanvas(); });
@@ -627,17 +642,47 @@ function renderFormatB() {
   const textCenter = width / 2;
   const maxContentW = 680;
 
-  // Backing Banner Panel ONLY behind Team Name to prevent image text clash
-  ctx.save();
-  const nameText = state.name || 'Anonymous Builder';
-  ctx.font = '900 52px "Outfit", sans-serif';
-  const nameWidth = ctx.measureText(nameText).width;
-  const bannerW = Math.min(width - 80, nameWidth + 60);
-  const bannerH = 68;
-  const bannerX = (width - bannerW) / 2;
-  const bannerY = 885;
+  // 1. Team Name Pill (Enlarged with vibrant cyber neon text)
+  if (state.team && state.team.trim() !== '') {
+    ctx.save();
+    const teamText = `👥 ${state.team.trim()}`;
+    ctx.font = '800 26px "Outfit", sans-serif';
+    const teamW = Math.min(width - 120, ctx.measureText(teamText).width + 50);
+    const teamH = 46;
+    const teamX = (width - teamW) / 2;
+    const teamY = 855;
 
-  // Dark emerald glassmorphism pill banner (#041C0F at 92% opacity)
+    // Dark emerald glassmorphism pill with glowing neon pink border
+    ctx.fillStyle = 'rgba(4, 28, 15, 0.94)';
+    ctx.strokeStyle = theme.pink;
+    ctx.lineWidth = 2.5;
+    ctx.shadowColor = theme.pink;
+    ctx.shadowBlur = 14;
+    drawRoundedRect(ctx, teamX, teamY, teamW, teamH, 15);
+    ctx.fill();
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // Vibrant Electric Gold text with black outline drop shadow
+    ctx.fillStyle = theme.gold;
+    ctx.font = '800 26px "Outfit", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+    ctx.shadowBlur = 8;
+    ctx.fillText(teamText, textCenter, 887);
+    ctx.restore();
+  }
+
+  // 2. Full Name / Alias Hero Backing Banner (Primary hero position in place of Team Name)
+  ctx.save();
+  const displayName = state.name && state.name.trim() !== '' ? state.name.trim() : 'Your Name Here';
+  ctx.font = '900 50px "Outfit", sans-serif';
+  const nameWidth = ctx.measureText(displayName).width;
+  const bannerW = Math.min(width - 80, nameWidth + 60);
+  const bannerH = 66;
+  const bannerX = (width - bannerW) / 2;
+  const bannerY = 915;
+
   ctx.fillStyle = 'rgba(4, 28, 15, 0.92)';
   ctx.strokeStyle = theme.gold;
   ctx.lineWidth = 2.5;
@@ -649,18 +694,19 @@ function renderFormatB() {
   ctx.shadowBlur = 0;
   ctx.restore();
 
-  // Name (Auto-Fitted)
-  drawAutoFittedText(ctx, state.name || 'Anonymous Builder', textCenter, 933, maxContentW, 52, '"Outfit", sans-serif', '900', theme.gold);
+  // Full Name Text (Golden if entered, soft opacity placeholder if blank)
+  const nameColor = (state.name && state.name.trim() !== '') ? theme.gold : 'rgba(245, 206, 21, 0.55)';
+  drawAutoFittedText(ctx, displayName, textCenter, 962, maxContentW, 50, '"Outfit", sans-serif', '900', nameColor);
 
-  // Backing Banner Panel for Builder Title ("AI & Web3 Sorcerer")
+  // 3. Backing Banner Panel for Builder Title ("AI & Web3 Sorcerer")
   ctx.save();
   const titleText = state.title || 'Beach Buidler';
-  ctx.font = '800 26px "Plus Jakarta Sans", sans-serif';
+  ctx.font = '800 24px "Plus Jakarta Sans", sans-serif';
   const titleWidth = ctx.measureText(titleText).width;
   const titleBannerW = Math.min(width - 120, titleWidth + 50);
-  const titleBannerH = 44;
+  const titleBannerH = 42;
   const titleBannerX = (width - titleBannerW) / 2;
-  const titleBannerY = 954;
+  const titleBannerY = 992;
 
   ctx.fillStyle = 'rgba(4, 28, 15, 0.92)';
   ctx.strokeStyle = theme.pink;
@@ -674,14 +720,14 @@ function renderFormatB() {
   ctx.restore();
 
   // Builder Title (Auto-Fitted)
-  drawAutoFittedText(ctx, state.title || 'Beach Buidler', textCenter, 984, maxContentW, 26, '"Plus Jakarta Sans", sans-serif', '800', theme.pink);
+  drawAutoFittedText(ctx, state.title || 'Beach Buidler', textCenter, 1021, maxContentW, 24, '"Plus Jakarta Sans", sans-serif', '800', theme.pink);
 
-  // Stack & Skills Pill Banner (Solid Dark Backing Banner to prevent background image clash)
+  // 4. Stack & Skills Pill Banner
   ctx.save();
   const maxStackPillW = 580;
   const stackText = state.stack || 'Rust • AI • Web3';
   
-  let stackFontSize = 22;
+  let stackFontSize = 21;
   ctx.font = `700 ${stackFontSize}px "JetBrains Mono", monospace`;
   while (ctx.measureText(stackText).width > maxStackPillW - 60 && stackFontSize > 13) {
     stackFontSize -= 1;
@@ -691,13 +737,12 @@ function renderFormatB() {
   const textWidth = ctx.measureText(stackText).width;
   const stackPillW = Math.min(maxStackPillW, textWidth + 50);
 
-  // Dark emerald glassmorphism backing banner for Skill Set (#041C0F at 92% opacity)
   ctx.fillStyle = 'rgba(4, 28, 15, 0.92)';
   ctx.strokeStyle = theme.gold;
   ctx.lineWidth = 2.5;
   ctx.shadowColor = 'rgba(0, 0, 0, 0.75)';
   ctx.shadowBlur = 14;
-  drawRoundedRect(ctx, textCenter - stackPillW / 2, 1012, stackPillW, 50, 25);
+  drawRoundedRect(ctx, textCenter - stackPillW / 2, 1046, stackPillW, 46, 23);
   ctx.fill();
   ctx.stroke();
   ctx.shadowBlur = 0;
@@ -705,18 +750,18 @@ function renderFormatB() {
   ctx.fillStyle = theme.gold;
   ctx.font = `700 ${stackFontSize}px "JetBrains Mono", monospace`;
   ctx.textAlign = 'center';
-  ctx.fillText(stackText, textCenter, 1044);
+  ctx.fillText(stackText, textCenter, 1076);
   ctx.restore();
 
-  // Backing Banner for Handle (@no_more_tokens)
+  // 5. Backing Banner for Handle (@no_more_tokens)
   ctx.save();
   const handleText = `@${state.handle || 'buidler_goa'}`;
-  ctx.font = '700 24px "Plus Jakarta Sans", sans-serif';
+  ctx.font = '700 22px "Plus Jakarta Sans", sans-serif';
   const handleWidth = ctx.measureText(handleText).width;
   const handleBannerW = Math.min(width - 140, handleWidth + 44);
-  const handleBannerH = 42;
+  const handleBannerH = 38;
   const handleBannerX = (width - handleBannerW) / 2;
-  const handleBannerY = 1076;
+  const handleBannerY = 1102;
 
   ctx.fillStyle = 'rgba(4, 28, 15, 0.92)';
   ctx.strokeStyle = theme.gold;
@@ -730,14 +775,14 @@ function renderFormatB() {
   ctx.restore();
 
   // Handle (Auto-Fitted)
-  drawAutoFittedText(ctx, `@${state.handle || 'buidler_goa'}`, textCenter, 1105, maxContentW, 24, '"Plus Jakarta Sans", sans-serif', '700', theme.gold);
+  drawAutoFittedText(ctx, `@${state.handle || 'buidler_goa'}`, textCenter, 1128, maxContentW, 22, '"Plus Jakarta Sans", sans-serif', '700', theme.gold);
 
-  // Backing Banner for Barcode Visual Block
+  // 6. Backing Banner for Barcode Visual Block
   ctx.save();
   const barcodeBannerW = 620;
-  const barcodeBannerH = 105;
+  const barcodeBannerH = 100;
   const barcodeBannerX = (width - barcodeBannerW) / 2;
-  const barcodeBannerY = 1130;
+  const barcodeBannerY = 1150;
 
   ctx.fillStyle = 'rgba(4, 28, 15, 0.94)';
   ctx.strokeStyle = theme.gold;
@@ -751,7 +796,7 @@ function renderFormatB() {
   ctx.restore();
 
   // Barcode Visual (Enlarged)
-  drawBarcode(ctx, textCenter - 290, 1142, 580, 80, theme.gold);
+  drawBarcode(ctx, textCenter - 290, 1160, 580, 78, theme.gold);
 
   // Footer Hashtag
   ctx.fillStyle = theme.pink;
@@ -1214,19 +1259,51 @@ function drawOuterCardBorderB(ctx, w, h, theme, frameStyle) {
 
 // Master Frame Renderer for Format B (Builder Pass 1080x1350)
 function drawSelectedFrameB(ctx, w, h, theme, photoX, photoY, photoW, photoH, frameStyle, cx, cy) {
+  const centerPointX = cx || (photoX + photoW / 2);
+  const centerPointY = cy || (photoY + photoH / 2);
+  const frameDim = 640;
+
   switch (frameStyle) {
+    case 'classic-arch':
+      ctx.save();
+      if (heritageFrameImg.complete && heritageFrameImg.naturalWidth !== 0) {
+        ctx.drawImage(heritageFrameImg, centerPointX - frameDim / 2, centerPointY - frameDim / 2, frameDim, frameDim);
+      } else {
+        drawOfficialArchedFrame(ctx, w, h, theme, 270, centerPointX, centerPointY);
+      }
+      ctx.restore();
+      break;
+
     case 'goa-sunset-palms':
-      drawGoaSunsetPalmsFrameB(ctx, w, h, theme, photoX, photoY, photoW, photoH, cx, cy);
+      ctx.save();
+      if (palmsFrameImg.complete && palmsFrameImg.naturalWidth !== 0) {
+        ctx.drawImage(palmsFrameImg, centerPointX - frameDim / 2, centerPointY - frameDim / 2, frameDim, frameDim);
+      } else {
+        ctx.lineWidth = 6;
+        ctx.strokeStyle = theme.gold;
+        ctx.beginPath();
+        ctx.arc(centerPointX, centerPointY, 270, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      ctx.restore();
       break;
+
     case 'anjuna-neon-rave':
-      drawAnjunaNeonRaveFrameB(ctx, w, h, theme, photoX, photoY, photoW, photoH);
+      ctx.save();
+      if (anjunaRaveFrameImg.complete && anjunaRaveFrameImg.naturalWidth !== 0) {
+        ctx.drawImage(anjunaRaveFrameImg, centerPointX - frameDim / 2, centerPointY - frameDim / 2, frameDim, frameDim);
+      } else {
+        drawAnjunaNeonRaveFrameB(ctx, w, h, theme, photoX, photoY, photoW, photoH);
+      }
+      ctx.restore();
       break;
+
     case 'vintage-stamp':
       drawVintageStampFrameB(ctx, w, h, theme, photoX, photoY, photoW, photoH);
       break;
-    case 'classic-arch':
+
     default:
-      drawOfficialArchedFrame(ctx, w, h, theme, 270, cx, cy);
+      drawOfficialArchedFrame(ctx, w, h, theme, 270, centerPointX, centerPointY);
       break;
   }
 }
