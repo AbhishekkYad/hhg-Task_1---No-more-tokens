@@ -1298,6 +1298,29 @@ function drawSelectedFrameB(ctx, w, h, theme, photoX, photoY, photoW, photoH, fr
       ctx.restore();
       break;
 
+    case 'simple-circle':
+      ctx.save();
+      // Outer Clean Golden Ring Frame
+      ctx.lineWidth = 8;
+      ctx.strokeStyle = theme.gold;
+      ctx.shadowColor = theme.gold;
+      ctx.shadowBlur = 10;
+      ctx.beginPath();
+      ctx.arc(centerPointX, centerPointY, 274, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Inner Neon Pink Accent Line
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = theme.pink;
+      ctx.shadowColor = theme.pink;
+      ctx.shadowBlur = 8;
+      ctx.beginPath();
+      ctx.arc(centerPointX, centerPointY, 284, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+      ctx.restore();
+      break;
+
     case 'vintage-stamp':
       drawVintageStampFrameB(ctx, w, h, theme, photoX, photoY, photoW, photoH);
       break;
